@@ -1,58 +1,93 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
 using System.Reflection;
 using UnityEngine;
 using UnityEditor;
+using UnityEngine.EventSystems;
 
 // attach this custom inspector to all MySpecialComponent components
 [CustomEditor(typeof (DropDownMenu))]
 public class DropDownMenuInspector : Editor
 {
     public string[] Elements;
-    public string[] Properties;
-    public List<GameObject> go;
-    private DropDownMenu Drop;
+
+    private DropDownMenu _drop;
+
+    private PropertyInfo[] _propertiesFrom;
+    private PropertyInfo[] _propertiesTo;
 
     public void OnEnable()
     {
-        Drop = (DropDownMenu) target;
+        _drop = (DropDownMenu) target;
     }
 
     public override void OnInspectorGUI()
     {
-
-        int i = 0;
-        go = new List<GameObject>(GameObject.FindGameObjectsWithTag("UI"));
-        Elements = new string[go.Count];
-
-        foreach (var element in go)
-        {
-            Elements.SetValue(element.name, i);
-            i++;
-        }
+        BuildElementList();
 
         base.OnInspectorGUI();
 
-        Rect r = EditorGUILayout.BeginHorizontal();
-        Drop.IndexElementList = EditorGUILayout.Popup("Element List:",
-            Drop.IndexElementList, Elements, EditorStyles.popup);
+        EditorGUILayout.BeginHorizontal();
+        _drop.IndexElementListChangeFrom = EditorGUILayout.Popup("Element List from:",
+            _drop.IndexElementListChangeFrom, Elements, EditorStyles.popup);
         EditorGUILayout.EndHorizontal();
-        var element1 = go[Drop.IndexElementList].GetType();
-        PropertyInfo[] properties = element1.GetProperties();
-        Properties = new string[properties.Length];
-        int j = 0;
-        foreach (PropertyInfo propertyInfo in properties)
-        {
-            Properties.SetValue(propertyInfo.Name, j);
-            j++;
-        }
-        r = EditorGUILayout.BeginHorizontal();
-        Drop.IndexPropertyList = EditorGUILayout.Popup("Element List:",
-            Drop.IndexPropertyList, Properties, EditorStyles.popup);
+
+        BuildPropertyList();
+
+        EditorGUILayout.BeginHorizontal();
+        _drop.IndexPropertyListChangeFrom = EditorGUILayout.Popup("Property List from:",
+            _drop.IndexPropertyListChangeFrom, _drop.PropertiesFromString, EditorStyles.popup);
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.BeginHorizontal();
+        _drop.IndexElementListChangeTo = EditorGUILayout.Popup("Element List to:",
+            _drop.IndexElementListChangeTo, Elements, EditorStyles.popup);
+        EditorGUILayout.EndHorizontal();
+
+        EditorGUILayout.BeginHorizontal();
+        _drop.IndexPropertyListChangeTo = EditorGUILayout.Popup("Property List to:",
+            _drop.IndexPropertyListChangeTo, _drop.PropertiesToString, EditorStyles.popup);
         EditorGUILayout.EndHorizontal();
 
         if (GUI.changed)
         {
-            EditorUtility.SetDirty(Drop);
+            EditorUtility.SetDirty(_drop);
+        }
+    }
+
+    void BuildElementList()
+    {
+        int i = 0;
+
+        _drop.Go = new ArrayList(Resources.FindObjectsOfTypeAll(typeof(UIBehaviour)));
+
+        Elements = new string[_drop.Go.Count];
+        foreach (var element in _drop.Go)
+        {
+            Elements.SetValue(element.ToString(), i);
+            i++;
+        }
+    }
+
+    void BuildPropertyList()
+    {
+        _drop.PropertiesFrom = _drop.Go[_drop.IndexElementListChangeFrom].GetType().GetProperties();
+        _drop.PropertiesTo = _drop.Go[_drop.IndexElementListChangeTo].GetType().GetProperties();
+
+        _drop.PropertiesFromString = new string[_drop.PropertiesFrom.Length];
+        _drop.PropertiesToString = new string[_drop.PropertiesTo.Length];
+
+        int j = 0;
+        foreach (PropertyInfo propertyInfo in _drop.PropertiesFrom)
+        {
+            _drop.PropertiesFromString.SetValue(propertyInfo.Name, j);
+            j++;
+        }
+
+        j = 0;
+        foreach (PropertyInfo propertyInfo in _drop.PropertiesTo)
+        {
+            _drop.PropertiesToString.SetValue(propertyInfo.Name, j);
+            j++;
         }
     }
 }
